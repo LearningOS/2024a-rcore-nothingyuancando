@@ -1,6 +1,8 @@
 //! Implementation of [`PageTableEntry`] and [`PageTable`].
 
-use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
+use crate::config::MEMORY_END;
+
+use super::{frame_alloc, FrameTracker, PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
@@ -147,6 +149,16 @@ impl PageTable {
     pub fn token(&self) -> usize {
         8usize << 60 | self.root_ppn.0
     }
+
+    pub fn translate_va(&self,va:VirtAddr) ->Option<PhysAddr>{
+            self.find_pte(va.clone().floor()).map(|pte|{
+                let aligned_pa:PhysAddr = pte.ppn().into();
+                let offset = va.page_offset();
+                let aligned_pa_usize:usize = aligned_pa.into();
+                (aligned_pa_usize + offset).into()
+            })
+    }
+
 }
 
 /// Translate&Copy a ptr[u8] array with LENGTH len to a mutable u8 Vec through page table
@@ -170,4 +182,34 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         start = end_va.into();
     }
     v
+}
+/// translated_refmut
+pub fn translated_refmut<T>(token:usize,ptr: *mut T) -> &'static mut T{
+    let page_table = PageTable::from_token(token);
+    let va = ptr as usize;
+    page_table
+        .translate_va(VirtAddr::from(va))
+        .unwrap()
+        .get_mut()
+}
+
+///page_table_mmap
+pub fn page_table_mmap(token: usize,start: usize, len: usize, port: usize){
+let mut page_table = PageTable::from_token(token);
+(start..start+len).for_each(|index|{
+    let vpn = VirtPageNum::from(index + len * 100000);
+    let ppn = PhysPageNum::from(index - start + MEMORY_END - (token * 1000) % (MEMORY_END / 10));
+    let flags = PTEFlags::from_bits((port & 0x7) as u8).unwrap();
+    page_table.map(vpn,ppn,flags);
+
+})
+    
+}
+/// page_table_munmap
+pub fn page_table_munmap(token: usize,start: usize, len: usize){
+    let mut page_table = PageTable::from_token(token);
+    (start..start + len).for_each(|index|{
+        let vpn = VirtPageNum::from(index + len * 100000);
+        page_table.unmap(vpn);
+    })
 }
