@@ -1,16 +1,15 @@
 //! Process management syscalls
+
 use crate::{
     config::MAX_SYSCALL_NUM,
+    mm::translated_struct_ptr,
     task::{
         change_program_brk, current_user_token, exit_current_and_run_next, get_sys_call_times,
         get_task_run_times, select_cur_task_to_mmap, select_cur_task_to_munmap,
         suspend_current_and_run_next, TaskStatus,
     },
-    mm::translated_struct_ptr,
     timer::get_time_us,
-
 };
-
 
 #[repr(C)]
 #[derive(Debug)]
@@ -21,25 +20,13 @@ pub struct TimeVal {
 
 /// Task information
 #[allow(dead_code)]
-#[derive(Copy, Clone)]
 pub struct TaskInfo {
     /// Task status in it's life cycle
-    pub status: TaskStatus,
+    status: TaskStatus,
     /// The numbers of syscall called by task
-    pub syscall_times: [u32; MAX_SYSCALL_NUM],
+    syscall_times: [u32; MAX_SYSCALL_NUM],
     /// Total running time of task
-    pub time: usize,
-}
-
-impl TaskInfo {
-    /// Initialize a TaskInfo. Status is UnInit by default.
-    pub fn new() -> Self {
-        Self {
-            status: TaskStatus::UnInit,
-            syscall_times: [0; MAX_SYSCALL_NUM],
-            time: 0
-        }
-    }
+    time: usize,
 }
 
 /// task exits and submit an exit code

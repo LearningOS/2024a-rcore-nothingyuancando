@@ -83,7 +83,12 @@ impl TaskManager {
         let next_task = &mut inner.tasks[0];
         next_task.task_status = TaskStatus::Running;
         let next_task_cx_ptr = &next_task.task_cx as *const TaskContext;
+
+        // 第一次运行task的时间
+        next_task.sys_call_begin = get_time_us() / 1000;
+
         drop(inner);
+
         let mut _unused = TaskContext::zero_init();
         // before this, we should drop local variables that must be dropped manually
         unsafe {
@@ -146,6 +151,11 @@ impl TaskManager {
             inner.current_task = next;
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
+
+            if inner.tasks[next].sys_call_begin == 0 {
+                inner.tasks[next].sys_call_begin = get_time_us() / 1000;
+            }
+
             drop(inner);
             // before this, we should drop local variables that must be dropped manually
             unsafe {
@@ -191,7 +201,6 @@ impl TaskManager {
         let current_task = inner.current_task;
         inner.tasks[current_task].memory_set.unmmap(start, len)
     }
-
 }
 
 /// Run the first task in task list.

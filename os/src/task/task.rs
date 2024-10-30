@@ -1,9 +1,10 @@
 //! Types related to task management
 use super::TaskContext;
-use crate::config::{MAX_SYSCALL_NUM,TRAP_CONTEXT_BASE};
-use crate::{mm::{
-    kernel_stack_position, MapPermission, MemorySet, PhysPageNum, VirtAddr,KERNEL_SPACE,
-}, trap::{trap_handler, TrapContext}};
+use crate::config::{MAX_SYSCALL_NUM, TRAP_CONTEXT_BASE};
+use crate::mm::{
+    kernel_stack_position, MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE,
+};
+use crate::trap::{trap_handler, TrapContext};
 
 /// The task control block (TCB) of a task.
 pub struct TaskControlBlock {
@@ -33,11 +34,11 @@ pub struct TaskControlBlock {
 
     /// begen time
     pub sys_call_begin: usize,
-
 }
 
 impl TaskControlBlock {
     /// get the trap context
+    /// 通过物理地址转化为结构体的引用
     pub fn get_trap_cx(&self) -> &'static mut TrapContext {
         self.trap_cx_ppn.get_mut()
     }
@@ -61,7 +62,7 @@ impl TaskControlBlock {
             kernel_stack_top.into(),
             MapPermission::R | MapPermission::W,
         );
-        let  task_control_block = Self {
+        let task_control_block = Self {
             task_status,
             task_cx: TaskContext::goto_trap_return(kernel_stack_top),
             memory_set,
@@ -72,9 +73,8 @@ impl TaskControlBlock {
             sys_call_times: [0; MAX_SYSCALL_NUM],
             sys_call_begin: 0,
         };
-
         // prepare TrapContext in user space
-        let trap_cx = task_control_block.get_trap_cx();
+        let trap_cx = task_control_block.get_trap_cx(); // 通过物理地址转化为结构体的引用
         *trap_cx = TrapContext::app_init_context(
             entry_point,
             user_sp,
