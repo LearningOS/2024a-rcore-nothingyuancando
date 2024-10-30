@@ -7,6 +7,8 @@ stages:
 test-code-job:
   stage: test
   script:
+    - qemu-system-riscv64 --version
+    - rustup target add riscv64gc-unknown-none-elf
     - git clone https://token:${rCoreCheckToken}@git.tsinghua.edu.cn/os-lab/2024a/ta/rcore-tutorial-checker-2024a.git ci-user
     - git clone https://token:${rCoreTestToken}@git.tsinghua.edu.cn/os-lab/2024a/public/rcore-tutorial-test-2024a.git ci-user/user
     - cd ci-user && make test CHAPTER=`echo $CI_COMMIT_REF_NAME | grep -oP 'ch\K[0-9]'` passwd=$BASE_TEST_TOKEN OFFLINE=1
