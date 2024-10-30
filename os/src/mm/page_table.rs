@@ -172,6 +172,7 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
     v
 }
 
+
 /// Translate&Copy a *mut T array to a mutable u8 Vec through page table
 pub fn translated_struct_ptr<T>(token: usize, ptr: *mut T) -> &'static mut T {
     let page_table = PageTable::from_token(token);
