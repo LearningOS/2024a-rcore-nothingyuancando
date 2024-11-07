@@ -16,9 +16,11 @@ use lazy_static::*;
 /// Processor management structure
 pub struct Processor {
     ///The task currently executing on the current processor
+    /// 在当前处理器上正在执行的任务
     current: Option<Arc<TaskControlBlock>>,
 
     ///The basic control flow of each core, helping to select and switch process
+    /// 当前处理器上的 idle 控制流的任务上下文的地址
     idle_task_cx: TaskContext,
 }
 
@@ -38,6 +40,7 @@ impl Processor {
 
     ///Get current task in moving semanteme
     pub fn take_current(&mut self) -> Option<Arc<TaskControlBlock>> {
+        // Option::take 意味着 current 字段也变为 None
         self.current.take()
     }
 
@@ -64,7 +67,8 @@ pub fn run_tasks() {
             let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
             task_inner.task_status = TaskStatus::Running;
 
-            if task_inner.sys_call_begin == 0{
+            // 第一次运行task的时间
+            if task_inner.sys_call_begin == 0 {
                 task_inner.sys_call_begin = get_time_us() / 1000;
             }
 

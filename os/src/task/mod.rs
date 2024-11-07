@@ -3,7 +3,7 @@
 //! Everything about task management, like starting and switching tasks is
 //! implemented here.
 //!
-//! A single global instance of [`TaskManager`] called `TASK_MANAGER` controls
+//! A single global instance of [`TaskManager`] called `PROCESSOR` controls
 //! all the tasks in the whole operating system.
 //!
 //! A single global instance of [`Processor`] called `PROCESSOR` monitors running
@@ -21,8 +21,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::MAX_SYSCALL_NUM;
-use crate::loader::get_app_data_by_name;
+use crate::{config::MAX_SYSCALL_NUM, loader::get_app_data_by_name};
 use alloc::sync::Arc;
 use lazy_static::*;
 pub use manager::{fetch_task, TaskManager};
@@ -36,6 +35,7 @@ pub use processor::{
     current_task, current_trap_cx, current_user_token, run_tasks, schedule, take_current_task,
     Processor,
 };
+
 /// Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
@@ -61,6 +61,8 @@ pub const IDLE_PID: usize = 0;
 /// Exit the current 'Running' task and run the next task in task list.
 pub fn exit_current_and_run_next(exit_code: i32) {
     // take from Processor
+    // 调用 take_current_task 来将当前进程控制块从处理器监控 PROCESSOR 中取出，而不只是得到一份拷贝，
+    // 这是为了正确维护进程控制块的引用计数；
     let task = take_current_task().unwrap();
 
     let pid = task.getpid();
@@ -116,7 +118,6 @@ lazy_static! {
 pub fn add_initproc() {
     add_task(INITPROC.clone());
 }
-
 
 /// Increase the sys call count
 pub fn increase_sys_call(sys_id: usize) {

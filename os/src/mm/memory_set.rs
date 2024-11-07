@@ -34,7 +34,7 @@ lazy_static! {
 pub struct MemorySet {
     page_table: PageTable,
     areas: Vec<MapArea>,
-    map_tree:BTreeMap<VirtPageNum,FrameTracker>,
+    map_tree: BTreeMap<VirtPageNum, FrameTracker>,
 }
 
 impl MemorySet {
@@ -43,7 +43,7 @@ impl MemorySet {
         Self {
             page_table: PageTable::new(),
             areas: Vec::new(),
-            map_tree:BTreeMap::new(),     
+            map_tree: BTreeMap::new(),
         }
     }
     /// Get the page table token
@@ -303,49 +303,55 @@ impl MemorySet {
         }
     }
 
-    ///mmap
-    pub fn mmap(&mut self,start:usize,len:usize,port:usize) ->isize{
+    /// mmap
+    pub fn mmap(&mut self, start: usize, len: usize, port: usize) -> isize {
         let va_start: VirtAddr = start.into();
-        if !va_start.aligned(){
+        if !va_start.aligned() {
             debug!("unmap fail don't aligned");
             return -1;
         }
-        let mut va_start:VirtPageNum = va_start.into();
+        let mut va_start: VirtPageNum = va_start.into();
+
         let mut flags = PTEFlags::from_bits(port as u8).unwrap();
+        if port & 0b0000_0001 != 0 {
+            flags |= PTEFlags::R;
+        }
 
-        if port & 0b0000_0001 != 0{
-            flags |=PTEFlags::R;
+        if port & 0b0000_0010 != 0 {
+            flags |= PTEFlags::W;
         }
-        if port & 0b0000_0010 !=0{
-            flags |=PTEFlags::W;
-        }
-        if port & 0b0000_0100 != 0{
-            flags |=PTEFlags::X;
-        }
-        flags |=PTEFlags::U;
-        flags |=PTEFlags::V;
 
-        let va_end:VirtAddr = (start + len).into();
-        let va_end:VirtPageNum = va_end.ceil();
+        if port & 0b0000_0100 != 0 {
+            flags |= PTEFlags::X;
+        }
+        flags |= PTEFlags::U;
+        flags |= PTEFlags::V;
+
+        let va_end: VirtAddr = (start + len).into();
+        let va_end: VirtPageNum = va_end.ceil();
+
+        // println!(
+        //     "start = {:x} && va_star = {} && va_end = {}",
+        //     start, va_start.0, va_end.0
+        // );
 
         while va_start != va_end {
-
-            if let Some(pte) = self.page_table.translate(va_start){
-                if pte.is_valid(){
+            // println!("map va_start = {}", va_start.0);
+            if let Some(pte) = self.page_table.translate(va_start) {
+                if pte.is_valid() {
+                    // println!("mmap found exit va_start {}", va_start.0);
                     return -1;
                 }
             }
-
-            if let Some(ppn) = frame_alloc(){
-                self.page_table.map(va_start,ppn.ppn,flags);
+            if let Some(ppn) = frame_alloc() {
+                self.page_table.map(va_start, ppn.ppn, flags);
                 self.map_tree.insert(va_start, ppn);
-            }else {
+            } else {
                 return -1;
             }
             va_start.step();
         }
         0
-
     }
 
     /// unmap
@@ -376,7 +382,6 @@ impl MemorySet {
         }
         0
     }
-
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
